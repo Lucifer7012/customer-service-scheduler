@@ -583,22 +583,20 @@
 
         <div class="field-grid">
           <div class="field">
-            <label for="scheduleMonth">排班月份</label>
-            <input id="scheduleMonth" type="month" value="2026-06" />
+            <label for="startDate">排班开始日期</label>
+            <input id="startDate" type="date" value="2026-05-11" />
           </div>
           <div class="field">
-            <label for="startDate">开始日期</label>
-            <input id="startDate" type="date" value="2026-06-01" />
-          </div>
-          <div class="field">
-            <label for="endDate">结束日期</label>
+            <label for="endDate">排班结束日期</label>
             <input id="endDate" type="date" value="2026-06-30" />
           </div>
-          <div class="field range-actions">
-            <label>快捷范围</label>
-            <div class="mini-actions">
-              <button class="secondary" type="button" id="applyMonthBtn">套用整月</button>
-            </div>
+          <div class="field">
+            <label for="exportStartDate">企微导出开始日期</label>
+            <input id="exportStartDate" type="date" value="2026-06-01" />
+          </div>
+          <div class="field">
+            <label for="exportEndDate">企微导出结束日期</label>
+            <input id="exportEndDate" type="date" value="2026-06-30" />
           </div>
           <div class="field field-wide">
             <label for="nextWeekendIndex">下一个休周末的人</label>
@@ -615,7 +613,7 @@
         </div>
 
         <div class="status" id="statusBox">
-          正在使用默认配置。现在按“开始日期到结束日期”生成，排整月时先选月份再套用整月即可。
+          正在使用默认配置。排班范围用于计算轮休，企微导出范围只控制模板里导出哪些日期。
         </div>
       </aside>
 
@@ -726,9 +724,10 @@
     const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
     const productOpsPattern = ["白班", "晚班", "白班", "晚班", "休息", "休息", "晚班"];
     const defaultState = {
-      scheduleMonth: "2026-06",
-      startDate: "2026-06-01",
+      startDate: "2026-05-11",
       endDate: "2026-06-30",
+      exportStartDate: "2026-06-01",
+      exportEndDate: "2026-06-30",
       nextWeekendIndex: 1,
       productOps: {
         name: "产品运维专员-曾培钒Wilson",
@@ -849,10 +848,13 @@
       syncNextWeekendOptions();
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
+      const exportStartDate = document.getElementById("exportStartDate").value;
+      const exportEndDate = document.getElementById("exportEndDate").value;
       return {
-        scheduleMonth: document.getElementById("scheduleMonth").value,
         startDate,
         endDate,
+        exportStartDate,
+        exportEndDate,
         weekCount: startDate && endDate ? countCalendarWeeks(startDate, endDate) : 0,
         nextWeekendIndex: Number(document.getElementById("nextWeekendIndex").value),
         productOps: readExportPerson("productOps"),
@@ -873,6 +875,18 @@
       }
       if (parseLocalDate(state.endDate) < parseLocalDate(state.startDate)) {
         return "结束日期不能早于开始日期。";
+      }
+      if (!state.exportStartDate) {
+        return "请先选企微导出开始日期。";
+      }
+      if (!state.exportEndDate) {
+        return "请先选企微导出结束日期。";
+      }
+      if (parseLocalDate(state.exportEndDate) < parseLocalDate(state.exportStartDate)) {
+        return "企微导出结束日期不能早于导出开始日期。";
+      }
+      if (parseLocalDate(state.exportStartDate) < parseLocalDate(state.startDate) || parseLocalDate(state.exportEndDate) > parseLocalDate(state.endDate)) {
+        return "企微导出日期必须在排班开始日期和排班结束日期之间。";
       }
       if (!Number.isInteger(state.weekCount) || state.weekCount < 1 || state.weekCount > 104) {
         return "日期范围太长了，请控制在 104 个日历周以内。";
@@ -900,27 +914,6 @@
       const month = String(date.getMonth() + 1).padStart(2, "0");
       const day = String(date.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
-    }
-
-    function monthRange(monthText) {
-      const [year, month] = monthText.split("-").map(Number);
-      const start = new Date(year, month - 1, 1);
-      const end = new Date(year, month, 0);
-      return {
-        startDate: toDateInputValue(start),
-        endDate: toDateInputValue(end),
-      };
-    }
-
-    function monthValueFromDate(dateText) {
-      return dateText ? dateText.slice(0, 7) : defaultState.scheduleMonth;
-    }
-
-    function applyMonthRange() {
-      const monthInput = document.getElementById("scheduleMonth");
-      const range = monthRange(monthInput.value || defaultState.scheduleMonth);
-      document.getElementById("startDate").value = range.startDate;
-      document.getElementById("endDate").value = range.endDate;
     }
 
     function mondayOf(date) {
@@ -1572,9 +1565,20 @@
 </worksheet>`;
     }
 
+    function filterRowsForWecomExport(state, dayRows) {
+      const start = parseLocalDate(state.exportStartDate);
+      const end = parseLocalDate(state.exportEndDate);
+      return dayRows.filter((row) => row.date >= start && row.date <= end);
+    }
+
     function exportWecomTemplateXlsx(state, dayRows) {
       if (!dayRows.length) return;
-      const sheetXml = buildSheetXml(state, dayRows);
+      const exportRows = filterRowsForWecomExport(state, dayRows);
+      if (!exportRows.length) {
+        setStatus("企微导出范围内没有排班日期，请检查导出开始日期和结束日期。", true);
+        return;
+      }
+      const sheetXml = buildSheetXml(state, exportRows);
       const files = [
         { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
         { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
@@ -1589,7 +1593,7 @@
 
       const zip = createZip(files);
       downloadBytes(zip, "企业微信自定义排班模板_已排班_含产品运维.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      setStatus("已生成企业微信横向模板，已包含产品运维固定班和客服排班。");
+      setStatus(`已生成企业微信横向模板：${state.exportStartDate} 到 ${state.exportEndDate}，共 ${exportRows.length} 天。`);
     }
 
     async function copyTable(state, dayRows) {
@@ -1626,14 +1630,14 @@
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw);
-        if (parsed.scheduleMonth) document.getElementById("scheduleMonth").value = parsed.scheduleMonth;
         if (parsed.startDate) document.getElementById("startDate").value = parsed.startDate;
         if (parsed.endDate) {
           document.getElementById("endDate").value = parsed.endDate;
         } else if (parsed.startDate && parsed.weekCount) {
           document.getElementById("endDate").value = toDateInputValue(addDays(parsed.startDate, (Number(parsed.weekCount) * 7) - 1));
         }
-        document.getElementById("scheduleMonth").value = monthValueFromDate(document.getElementById("startDate").value);
+        document.getElementById("exportStartDate").value = parsed.exportStartDate || defaultState.exportStartDate;
+        document.getElementById("exportEndDate").value = parsed.exportEndDate || document.getElementById("endDate").value || defaultState.exportEndDate;
         parsed.employees?.forEach((item, index) => {
           const nameInput = document.getElementById(`name_${index}`);
           const roleInput = document.getElementById(`role_${index}`);
@@ -1696,9 +1700,10 @@
 
     function resetAll() {
       localStorage.removeItem("serviceSchedulerState");
-      document.getElementById("scheduleMonth").value = defaultState.scheduleMonth;
       document.getElementById("startDate").value = defaultState.startDate;
       document.getElementById("endDate").value = defaultState.endDate;
+      document.getElementById("exportStartDate").value = defaultState.exportStartDate;
+      document.getElementById("exportEndDate").value = defaultState.exportEndDate;
       defaultState.employees.forEach((employee, index) => {
         document.getElementById(`name_${index}`).value = employee.name;
         document.getElementById(`role_${index}`).value = employee.role;
@@ -1717,17 +1722,6 @@
 
     document.getElementById("generateBtn").addEventListener("click", generate);
     document.getElementById("resetBtn").addEventListener("click", resetAll);
-    document.getElementById("applyMonthBtn").addEventListener("click", () => {
-      applyMonthRange();
-      generate();
-    });
-    document.getElementById("scheduleMonth").addEventListener("change", () => {
-      applyMonthRange();
-      generate();
-    });
-    document.getElementById("startDate").addEventListener("change", () => {
-      document.getElementById("scheduleMonth").value = monthValueFromDate(document.getElementById("startDate").value);
-    });
     document.getElementById("csvBtn").addEventListener("click", () => latestState && exportCsv(latestState, latestDayRows));
     document.getElementById("xlsBtn").addEventListener("click", () => latestState && exportXls(latestState, latestRoleRows, latestDayRows, latestStats));
     document.getElementById("wecomBtn").addEventListener("click", () => latestState && exportWecomTemplateXlsx(latestState, latestDayRows));
