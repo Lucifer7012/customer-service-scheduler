@@ -156,6 +156,24 @@
       grid-column: 1 / -1;
     }
 
+    .range-actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .mini-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .mini-actions button {
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+    }
+
     .field label {
       font-size: 13px;
       color: var(--ink-soft);
@@ -565,12 +583,22 @@
 
         <div class="field-grid">
           <div class="field">
-            <label for="startDate">开始日期</label>
-            <input id="startDate" type="date" value="2026-06-08" />
+            <label for="scheduleMonth">排班月份</label>
+            <input id="scheduleMonth" type="month" value="2026-06" />
           </div>
           <div class="field">
-            <label for="weekCount">生成周数</label>
-            <input id="weekCount" type="number" min="1" max="104" value="16" />
+            <label for="startDate">开始日期</label>
+            <input id="startDate" type="date" value="2026-06-01" />
+          </div>
+          <div class="field">
+            <label for="endDate">结束日期</label>
+            <input id="endDate" type="date" value="2026-06-30" />
+          </div>
+          <div class="field range-actions">
+            <label>快捷范围</label>
+            <div class="mini-actions">
+              <button class="secondary" type="button" id="applyMonthBtn">套用整月</button>
+            </div>
           </div>
           <div class="field field-wide">
             <label for="nextWeekendIndex">下一个休周末的人</label>
@@ -587,7 +615,7 @@
         </div>
 
         <div class="status" id="statusBox">
-          正在使用默认配置。开始日期建议填周一；如果不是周一，系统会提醒你，但仍然可以生成。
+          正在使用默认配置。现在按“开始日期到结束日期”生成，排整月时先选月份再套用整月即可。
         </div>
       </aside>
 
@@ -698,8 +726,9 @@
     const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
     const productOpsPattern = ["白班", "晚班", "白班", "晚班", "休息", "休息", "晚班"];
     const defaultState = {
-      startDate: "2026-06-08",
-      weekCount: 16,
+      scheduleMonth: "2026-06",
+      startDate: "2026-06-01",
+      endDate: "2026-06-30",
       nextWeekendIndex: 1,
       productOps: {
         name: "产品运维专员-曾培钒Wilson",
@@ -818,9 +847,13 @@
 
     function readState() {
       syncNextWeekendOptions();
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
       return {
-        startDate: document.getElementById("startDate").value,
-        weekCount: Number(document.getElementById("weekCount").value),
+        scheduleMonth: document.getElementById("scheduleMonth").value,
+        startDate,
+        endDate,
+        weekCount: startDate && endDate ? countCalendarWeeks(startDate, endDate) : 0,
         nextWeekendIndex: Number(document.getElementById("nextWeekendIndex").value),
         productOps: readExportPerson("productOps"),
         employees: defaultState.employees.map((_, index) => ({
@@ -835,8 +868,14 @@
       if (!state.startDate) {
         return "请先选开始日期。";
       }
+      if (!state.endDate) {
+        return "请先选结束日期。";
+      }
+      if (parseLocalDate(state.endDate) < parseLocalDate(state.startDate)) {
+        return "结束日期不能早于开始日期。";
+      }
       if (!Number.isInteger(state.weekCount) || state.weekCount < 1 || state.weekCount > 104) {
-        return "生成周数请填 1 到 104 之间的整数。";
+        return "日期范围太长了，请控制在 104 个日历周以内。";
       }
 
       const uniqueRoles = new Set(state.employees.map((item) => item.role));
@@ -852,9 +891,58 @@
       return "";
     }
 
-    function isMonday(dateText) {
-      const date = new Date(`${dateText}T00:00:00`);
-      return date.getDay() === 1;
+    function parseLocalDate(dateText) {
+      return new Date(`${dateText}T00:00:00`);
+    }
+
+    function toDateInputValue(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function monthRange(monthText) {
+      const [year, month] = monthText.split("-").map(Number);
+      const start = new Date(year, month - 1, 1);
+      const end = new Date(year, month, 0);
+      return {
+        startDate: toDateInputValue(start),
+        endDate: toDateInputValue(end),
+      };
+    }
+
+    function monthValueFromDate(dateText) {
+      return dateText ? dateText.slice(0, 7) : defaultState.scheduleMonth;
+    }
+
+    function applyMonthRange() {
+      const monthInput = document.getElementById("scheduleMonth");
+      const range = monthRange(monthInput.value || defaultState.scheduleMonth);
+      document.getElementById("startDate").value = range.startDate;
+      document.getElementById("endDate").value = range.endDate;
+    }
+
+    function mondayOf(date) {
+      const result = new Date(date);
+      const day = result.getDay() === 0 ? 7 : result.getDay();
+      result.setDate(result.getDate() - day + 1);
+      result.setHours(0, 0, 0, 0);
+      return result;
+    }
+
+    function weekdayIndexForDate(date) {
+      return date.getDay() === 0 ? 6 : date.getDay() - 1;
+    }
+
+    function countCalendarWeeks(startDateText, endDateText) {
+      const firstMonday = mondayOf(parseLocalDate(startDateText));
+      const lastMonday = mondayOf(parseLocalDate(endDateText));
+      return Math.floor((lastMonday - firstMonday) / (7 * 24 * 60 * 60 * 1000)) + 1;
+    }
+
+    function daysBetweenInclusive(startDateText, endDateText) {
+      return Math.floor((parseLocalDate(endDateText) - parseLocalDate(startDateText)) / (24 * 60 * 60 * 1000)) + 1;
     }
 
     function buildWeeks(state) {
@@ -911,7 +999,7 @@
     }
 
     function addDays(dateText, days) {
-      const date = new Date(`${dateText}T00:00:00`);
+      const date = parseLocalDate(dateText);
       date.setDate(date.getDate() + days);
       return date;
     }
@@ -922,24 +1010,31 @@
 
     function buildDayRows(state, weeks) {
       const rows = [];
+      const firstMonday = mondayOf(parseLocalDate(state.startDate));
+      const totalDays = daysBetweenInclusive(state.startDate, state.endDate);
+
       weeks.forEach((week) => {
         week.rolesByEmployee.forEach((roleKey, employeeIndex) => {
           week[`role_${employeeIndex}`] = roleKey;
         });
-
-        for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
-          const date = addDays(state.startDate, rows.length);
-          rows.push({
-            date,
-            dateText: formatDate(date),
-            weekday: weekdays[dayIndex],
-            weekNo: week.weekNo,
-            blockNo: week.blockNo,
-            weekType: week.weekType,
-            shifts: week.rolesByEmployee.map((roleKey) => rolePatterns[roleKey][dayIndex]),
-          });
-        }
       });
+
+      for (let offset = 0; offset < totalDays; offset += 1) {
+        const date = addDays(state.startDate, offset);
+        const weekIndex = Math.floor((mondayOf(date) - firstMonday) / (7 * 24 * 60 * 60 * 1000));
+        const week = weeks[weekIndex];
+        const dayIndex = weekdayIndexForDate(date);
+        rows.push({
+          date,
+          dateText: formatDate(date),
+          weekday: weekdays[dayIndex],
+          weekNo: week.weekNo,
+          blockNo: week.blockNo,
+          weekType: week.weekType,
+          shifts: week.rolesByEmployee.map((roleKey) => rolePatterns[roleKey][dayIndex]),
+        });
+      }
+
       return rows;
     }
 
@@ -1531,8 +1626,14 @@
       if (!raw) return;
       try {
         const parsed = JSON.parse(raw);
+        if (parsed.scheduleMonth) document.getElementById("scheduleMonth").value = parsed.scheduleMonth;
         if (parsed.startDate) document.getElementById("startDate").value = parsed.startDate;
-        if (parsed.weekCount) document.getElementById("weekCount").value = parsed.weekCount;
+        if (parsed.endDate) {
+          document.getElementById("endDate").value = parsed.endDate;
+        } else if (parsed.startDate && parsed.weekCount) {
+          document.getElementById("endDate").value = toDateInputValue(addDays(parsed.startDate, (Number(parsed.weekCount) * 7) - 1));
+        }
+        document.getElementById("scheduleMonth").value = monthValueFromDate(document.getElementById("startDate").value);
         parsed.employees?.forEach((item, index) => {
           const nameInput = document.getElementById(`name_${index}`);
           const roleInput = document.getElementById(`role_${index}`);
@@ -1588,18 +1689,16 @@
       renderScheduleTable(state, dayRows);
       renderSummary(stats);
 
-      const mondayWarning = isMonday(state.startDate)
-        ? `已生成 ${weeks.length} 周排班。开始日期是周一，规则完全对齐。`
-        : `已生成 ${weeks.length} 周排班，但你填的开始日期不是周一。表能出，但班型是按“周一开周”设计的，建议改成周一。`;
-      setStatus(mondayWarning, !isMonday(state.startDate));
-      tableMeta.textContent = `${state.startDate} 开始，共 ${weeks.length} 周，${dayRows.length} 天`;
+      setStatus(`已生成 ${state.startDate} 到 ${state.endDate} 的排班，共 ${weeks.length} 个日历周、${dayRows.length} 天。开始日不用是周一，每天都会按真实星期套班。`);
+      tableMeta.textContent = `${state.startDate} 至 ${state.endDate}，覆盖 ${weeks.length} 个日历周，${dayRows.length} 天`;
       persistState(state);
     }
 
     function resetAll() {
       localStorage.removeItem("serviceSchedulerState");
+      document.getElementById("scheduleMonth").value = defaultState.scheduleMonth;
       document.getElementById("startDate").value = defaultState.startDate;
-      document.getElementById("weekCount").value = defaultState.weekCount;
+      document.getElementById("endDate").value = defaultState.endDate;
       defaultState.employees.forEach((employee, index) => {
         document.getElementById(`name_${index}`).value = employee.name;
         document.getElementById(`role_${index}`).value = employee.role;
@@ -1618,6 +1717,17 @@
 
     document.getElementById("generateBtn").addEventListener("click", generate);
     document.getElementById("resetBtn").addEventListener("click", resetAll);
+    document.getElementById("applyMonthBtn").addEventListener("click", () => {
+      applyMonthRange();
+      generate();
+    });
+    document.getElementById("scheduleMonth").addEventListener("change", () => {
+      applyMonthRange();
+      generate();
+    });
+    document.getElementById("startDate").addEventListener("change", () => {
+      document.getElementById("scheduleMonth").value = monthValueFromDate(document.getElementById("startDate").value);
+    });
     document.getElementById("csvBtn").addEventListener("click", () => latestState && exportCsv(latestState, latestDayRows));
     document.getElementById("xlsBtn").addEventListener("click", () => latestState && exportXls(latestState, latestRoleRows, latestDayRows, latestStats));
     document.getElementById("wecomBtn").addEventListener("click", () => latestState && exportWecomTemplateXlsx(latestState, latestDayRows));
