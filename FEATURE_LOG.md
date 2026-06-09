@@ -14,8 +14,9 @@
   - 新增 `tools/sync-start.ps1` 与 `tools/sync-finish.ps1`，固定开始同步与收尾提交流程。
   - 新增 `tools/check-html.js`，用于检查 `index.html` 内嵌脚本语法。
 - 验证：
-  - 待执行 `node tools/check-html.js`。
-  - 待执行 GitHub 首次提交与推送。
+  - `node tools/check-html.js` 通过。
+  - GitHub 仓库已创建并推送：`https://github.com/Lucifer7012/customer-service-scheduler`。
+  - GitHub Pages 已启用：`https://lucifer7012.github.io/customer-service-scheduler/`。
 
 ### 当前排班器功能基线
 
@@ -30,4 +31,3 @@
 - 后续注意：
   - 企业微信导出内的休息班次必须写作 `休息`，不要改回 `休假`。
   - 第四位客服暂未到岗时继续使用 `客服D` 作为占位。
-

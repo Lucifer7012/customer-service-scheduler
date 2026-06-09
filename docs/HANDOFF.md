@@ -40,6 +40,8 @@
 ## 当前项目快照
 
 - 项目：客服排班器。
+- GitHub：`https://github.com/Lucifer7012/customer-service-scheduler`。
+- 在线页面：`https://lucifer7012.github.io/customer-service-scheduler/`。
 - 入口：`index.html`。
 - 类型：静态 HTML 单页工具。
 - 当前主要需求：给客服和产品运维一起排班，并导出企业微信模板。
@@ -56,4 +58,3 @@
 - 如果用户继续反馈 UI 不像“器”，优先改交互而不是只改静态表格。
 - 如果用户继续反馈企业微信模板，优先用原模板文件核对行列、标题、说明、数据验证和班次名。
 - 每轮改完后运行 `node tools/check-html.js`，再提交并同步 GitHub。
-

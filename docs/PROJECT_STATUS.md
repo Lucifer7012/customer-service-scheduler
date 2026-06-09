@@ -3,6 +3,8 @@
 最新状态（2026-06-09）：
 
 - 项目名称：客服排班器。
+- GitHub 仓库：`https://github.com/Lucifer7012/customer-service-scheduler`。
+- 在线页面：`https://lucifer7012.github.io/customer-service-scheduler/`。
 - 入口文件：`index.html`。
 - 当前形态：纯前端单页工具，可直接本地打开，也可通过 GitHub Pages 发布。
 - 当前主要功能：
@@ -27,4 +29,3 @@
 ```powershell
 node tools/check-html.js
 ```
-

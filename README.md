@@ -4,7 +4,10 @@
 
 ## 在线使用
 
-GitHub Pages 启用后，可通过仓库页面的 Pages 地址访问。入口文件是 `index.html`。
+- GitHub 仓库：`https://github.com/Lucifer7012/customer-service-scheduler`
+- 在线页面：`https://lucifer7012.github.io/customer-service-scheduler/`
+
+入口文件是 `index.html`。
 
 本地打开方式：
 
@@ -46,4 +49,3 @@ GitHub Pages 启用后，可通过仓库页面的 Pages 地址访问。入口文
 - `docs/CHANGELOG.md`：每次更新的简短流水。
 - `docs/PROJECT_STATUS.md`：当前项目状态。
 - `docs/HANDOFF.md`：给下一次 Codex 或另一台电脑接手用。
-
