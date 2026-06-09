@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>客服排班器</title>
+  <style>
+    :root {
+      --ink: #14324a;
+      --ink-soft: #34556c;
+      --paper: #f8f5ee;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #ffffff;
+      --line: #d7e1e8;
+      --accent: #d95f39;
+      --accent-soft: #ffe2d8;
+      --green: #2f7d4a;
+      --green-soft: #e4f2e8;
+      --blue: #2f5e88;
+      --blue-soft: #dce9f4;
+      --gold: #c18d16;
+      --gold-soft: #fff0c7;
+      --shadow: 0 18px 50px rgba(20, 50, 74, 0.12);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(217, 95, 57, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(47, 94, 136, 0.20), transparent 24%),
+        linear-gradient(180deg, #f7efe3 0%, #eef4f7 100%);
+      min-height: 100vh;
+    }
+
+    .shell {
+      width: min(1400px, calc(100vw - 32px));
+      margin: 20px auto 40px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #173650 0%, #254d71 58%, #375f7f 100%);
+      color: #fff;
+      border-radius: 30px;
+      padding: 34px 34px 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -30px -40px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0));
+      pointer-events: none;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 52px);
+      line-height: 1;
+      letter-spacing: 1px;
+    }
+
+    .hero p {
+      margin: 14px 0 0;
+      max-width: 820px;
+      font-size: 17px;
+      line-height: 1.75;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .hero-tag {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(6px);
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 18px;
+      margin-top: 18px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .card h2,
+    .card h3 {
+      margin: 0;
+    }
+
+    .controls {
+      padding: 22px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .section-title h2 {
+      font-size: 24px;
+    }
+
+    .hint {
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-wide {
+      grid-column: 1 / -1;
+    }
+
+    .field label {
+      font-size: 13px;
+      color: var(--ink-soft);
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: #7aa5c7;
+      box-shadow: 0 0 0 4px rgba(77, 125, 161, 0.16);
+      transform: translateY(-1px);
+    }
+
+    .roster {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .roster-row {
+      display: grid;
+      grid-template-columns: 1fr 130px;
+      gap: 10px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.62);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 12px;
+    }
+
+    .roster-row strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .export-row {
+      grid-template-columns: 1fr;
+    }
+
+    .export-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .role-note {
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    .btn-row,
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(20, 50, 74, 0.16);
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #d95f39 0%, #c64e2e 100%);
+      color: #fff;
+    }
+
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f1f7fa;
+      color: var(--ink-soft);
+      font-size: 13px;
+      line-height: 1.7;
+      border: 1px dashed #bfd2df;
+    }
+
+    .main {
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .kpi {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 250, 0.92));
+      border: 1px solid #e5edf2;
+      border-radius: 22px;
+      padding: 18px;
+    }
+
+    .kpi small {
+      display: block;
+      color: var(--ink-soft);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .kpi strong {
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .rotations,
+    .summary {
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px 8px;
+    }
+
+    .panel-head h3 {
+      font-size: 22px;
+    }
+
+    .panel-head p {
+      margin: 4px 0 0;
+      color: var(--ink-soft);
+      font-size: 13px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      padding: 0 18px 18px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 820px;
+    }
+
+    th,
+    td {
+      padding: 12px 10px;
+      border-right: 1px solid #dde7ee;
+      border-bottom: 1px solid #dde7ee;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    th:first-child,
+    td:first-child {
+      border-left: 1px solid #dde7ee;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #214b6e;
+      color: #fff;
+      font-size: 13px;
+    }
+
+    tbody tr:first-child td {
+      border-top: 1px solid #dde7ee;
+    }
+
+    tbody tr:nth-child(7n + 1) td {
+      border-top: 3px solid #8093a5;
+    }
+
+    tbody tr:hover td {
+      background: rgba(47, 94, 136, 0.05);
+    }
+
+    .shift-day {
+      background: var(--green-soft);
+      color: var(--green);
+      font-weight: 700;
+    }
+
+    .shift-night {
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .shift-off {
+      background: var(--blue-soft);
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    .shift-cell {
+      cursor: cell;
+      user-select: none;
+    }
+
+    .shift-cell.is-selected {
+      outline: 2px solid #4b88ff;
+      outline-offset: -2px;
+      box-shadow: inset 0 0 0 999px rgba(75, 136, 255, 0.15);
+    }
+
+    .shift-cell.is-anchor {
+      box-shadow:
+        inset 0 0 0 999px rgba(75, 136, 255, 0.19),
+        inset 0 0 0 2px #4b88ff;
+    }
+
+    .week-transition {
+      background: var(--gold-soft);
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .week-regular {
+      color: var(--ink);
+    }
+
+    .rotation-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #eef5f9;
+      color: var(--ink-soft);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0 18px 18px;
+    }
+
+    .person-card {
+      background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
+      border: 1px solid #e3ebf0;
+      border-radius: 22px;
+      padding: 16px;
+    }
+
+    .person-card h4 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-top: 1px dashed #d6e0e7;
+      font-size: 14px;
+    }
+
+    .metric-row:first-of-type {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    .rules {
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(244, 248, 251, 0.92));
+    }
+
+    .rules-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .rule-box {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .rule-box strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--ink-soft);
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1180px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        width: min(100vw - 16px, 1000px);
+        margin: 8px auto 20px;
+      }
+
+      .hero {
+        padding: 24px 18px;
+        border-radius: 24px;
+      }
+
+      .field-grid,
+      .summary-grid,
+      .rules-grid,
+      .kpis {
+        grid-template-columns: 1fr;
+      }
+
+      .roster-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #fff;
+      }
+
+      .shell {
+        width: 100%;
+        margin: 0;
+      }
+
+      .controls,
+      .toolbar,
+      .hero-tags {
+        display: none !important;
+      }
+
+      .hero,
+      .card {
+        box-shadow: none;
+        border: 0;
+        background: #fff;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <h1>客服排班器</h1>
+      <p>这次不是样板表，而是一个能直接操作的排班工具。填名字、设开始日期、选周数，系统会按照“1人休周末、1人休周二三、2人休周四五、4周轮换周末休”的规则自动排出来，并把换休周单独标亮。</p>
+      <div class="hero-tags">
+        <span class="hero-tag">自动轮换</span>
+        <span class="hero-tag">换休周高亮</span>
+        <span class="hero-tag">统计汇总</span>
+        <span class="hero-tag">导出 Excel / CSV</span>
+      </div>
+    </section>
+
+    <div class="grid">
+      <aside class="card controls">
+        <div class="section-title">
+          <h2>配置</h2>
+          <span class="hint">改完直接点生成</span>
+        </div>
+
+        <div class="field-grid">
+          <div class="field">
+            <label for="startDate">开始日期</label>
+            <input id="startDate" type="date" value="2026-06-08" />
+          </div>
+          <div class="field">
+            <label for="weekCount">生成周数</label>
+            <input id="weekCount" type="number" min="1" max="104" value="16" />
+          </div>
+          <div class="field field-wide">
+            <label for="nextWeekendIndex">下一个休周末的人</label>
+            <select id="nextWeekendIndex"></select>
+          </div>
+        </div>
+
+        <div class="roster" id="roster"></div>
+        <div class="roster" id="exportConfig"></div>
+
+        <div class="btn-row">
+          <button class="primary" id="generateBtn">生成排班</button>
+          <button class="secondary" id="resetBtn">恢复默认</button>
+        </div>
+
+        <div class="status" id="statusBox">
+          正在使用默认配置。开始日期建议填周一；如果不是周一，系统会提醒你，但仍然可以生成。
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="kpis" id="kpiGrid"></div>
+
+        <section class="card rotations">
+          <div class="panel-head">
+            <div>
+              <h3>周轮换</h3>
+              <p>这块回答“这周谁休周末、谁休周二三、谁休周四五”。</p>
+            </div>
+            <div class="toolbar">
+              <button class="secondary" id="copyBtn">复制表格</button>
+              <button class="secondary" id="copyShiftsBtn">复制4人班次</button>
+              <button class="secondary" id="copySelectedBtn">复制选中班次</button>
+              <button class="secondary" id="clearSelectionBtn">清除选择</button>
+              <button class="secondary" id="csvBtn">导出 CSV</button>
+              <button class="secondary" id="xlsBtn">导出 Excel</button>
+              <button class="secondary" id="wecomBtn">导出企微模板</button>
+              <button class="secondary" id="printBtn">打印</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table id="rotationTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card summary">
+          <div class="panel-head">
+            <div>
+              <h3>详细排班表</h3>
+              <p>每天的白班、晚班、休假都在这里，换休周单独标亮。</p>
+            </div>
+            <span class="rotation-chip" id="tableMeta">尚未生成</span>
+          </div>
+          <div class="table-wrap">
+            <table id="scheduleTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="panel-head">
+            <div>
+              <h3>个人统计</h3>
+              <p>快速看每个人白班、晚班、休假和周末承担情况。</p>
+            </div>
+          </div>
+          <div class="summary-grid" id="summaryGrid"></div>
+        </section>
+
+        <section class="card rules">
+          <h3>当前采用的规则</h3>
+          <div class="rules-grid">
+            <div class="rule-box">
+              <strong>固定班型</strong>
+              周末休：周六周日休。周二三休：周二周三休。周四五休 A / B：两个人都休周四周五，但班次分布不同。
+            </div>
+            <div class="rule-box">
+              <strong>轮换逻辑</strong>
+              每个人休够 4 个周末后，先换到你在配置区指定的“下一个休周末的人”，后续再按员工顺序继续轮。
+            </div>
+            <div class="rule-box">
+              <strong>换休周处理</strong>
+              新接周末休的人拿“周末休”班型；原周末休的人则接手这个人之前的班型。其他两个人的班型不变。
+            </div>
+            <div class="rule-box">
+              <strong>重要提醒</strong>
+              这种换法会出现新接周末休的人在换休前后连上 7 天班的情况，页面会把换休周标出来方便核对。
+            </div>
+          </div>
+          <div class="footer-note">
+            说明：导出的 Excel 是 Excel 可直接打开的 `.xls` 文件；复制表格会把详细排班复制成可直接粘进 Excel 的制表符内容。
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const roleOptions = [
+      { value: "W", label: "周末休" },
+      { value: "T", label: "周二三休" },
+      { value: "F1", label: "周四五休A" },
+      { value: "F2", label: "周四五休B" },
+    ];
+
+    const roleLabels = {
+      W: "周末休",
+      T: "周二三休",
+      F1: "周四五休A",
+      F2: "周四五休B",
+    };
+
+    const rolePatterns = {
+      W: ["白班", "白班", "晚班", "晚班", "晚班", "休假", "休假"],
+      T: ["白班", "休假", "休假", "白班", "白班", "晚班", "晚班"],
+      F1: ["晚班", "白班", "白班", "休假", "休假", "晚班", "晚班"],
+      F2: ["晚班", "晚班", "晚班", "休假", "休假", "白班", "白班"],
+    };
+
+    const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    const productOpsPattern = ["白班", "晚班", "白班", "晚班", "休息", "休息", "晚班"];
+    const defaultState = {
+      startDate: "2026-06-08",
+      weekCount: 16,
+      nextWeekendIndex: 1,
+      productOps: {
+        name: "产品运维专员-曾培钒Wilson",
+        account: "ZengPeiFan",
+        department: "OgCloud/产品运营中心/产品开发部/产品运维组",
+        position: "产品运维专员",
+      },
+      employees: [
+        { name: "客服A", role: "W" },
+        { name: "客服B", role: "T" },
+        { name: "客服C", role: "F1" },
+        { name: "客服D", role: "F2" },
+      ],
+      exportEmployees: [
+        { name: "海外游戏客服-廖宇杰Kelly", account: "LiaoYuJie", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "海外游戏客服-唐禧雯lvy", account: "TangXiWen", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "海外游戏客服-杨洋Mia", account: "YangYang", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "客服D", account: "", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+      ],
+    };
+
+    const rosterEl = document.getElementById("roster");
+    const exportConfigEl = document.getElementById("exportConfig");
+    const statusBox = document.getElementById("statusBox");
+    const rotationTable = document.getElementById("rotationTable");
+    const scheduleTable = document.getElementById("scheduleTable");
+    const kpiGrid = document.getElementById("kpiGrid");
+    const summaryGrid = document.getElementById("summaryGrid");
+    const tableMeta = document.getElementById("tableMeta");
+
+    function buildRoster() {
+      rosterEl.innerHTML = "";
+      defaultState.employees.forEach((employee, index) => {
+        const row = document.createElement("div");
+        row.className = "roster-row";
+        row.innerHTML = `
+          <div>
+            <strong>员工 ${index + 1}</strong>
+            <div class="field">
+              <label for="name_${index}">姓名</label>
+              <input id="name_${index}" type="text" value="${employee.name}" />
+            </div>
+          </div>
+          <div class="field">
+            <label for="role_${index}">当前角色</label>
+            <select id="role_${index}">
+              ${roleOptions.map((role) => `
+                <option value="${role.value}" ${role.value === employee.role ? "selected" : ""}>${role.label}</option>
+              `).join("")}
+            </select>
+          </div>
+        `;
+        rosterEl.appendChild(row);
+      });
+    }
+
+    function buildExportConfig() {
+      exportConfigEl.innerHTML = `
+        <div class="section-title">
+          <h2>企微导出信息</h2>
+          <span class="hint">会写入导出模板</span>
+        </div>
+        ${renderExportPerson("productOps", "产品运维专员", defaultState.productOps)}
+        ${defaultState.exportEmployees.map((person, index) => renderExportPerson(`export_${index}`, `客服 ${index + 1}`, person)).join("")}
+      `;
+    }
+
+    function renderExportPerson(prefix, title, person) {
+      return `
+        <div class="roster-row export-row">
+          <strong>${title}</strong>
+          <div class="export-fields">
+            <div class="field">
+              <label for="${prefix}_name">姓名</label>
+              <input id="${prefix}_name" type="text" value="${person.name}" />
+            </div>
+            <div class="field">
+              <label for="${prefix}_account">账号</label>
+              <input id="${prefix}_account" type="text" value="${person.account}" />
+            </div>
+            <div class="field">
+              <label for="${prefix}_department">部门</label>
+              <input id="${prefix}_department" type="text" value="${person.department}" />
+            </div>
+            <div class="field">
+              <label for="${prefix}_position">职务</label>
+              <select id="${prefix}_position">
+                <option value="">选填</option>
+                <option value="产品运维专员" ${person.position === "产品运维专员" ? "selected" : ""}>产品运维专员</option>
+                <option value="海外游戏客服" ${person.position === "海外游戏客服" ? "selected" : ""}>海外游戏客服</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function readExportPerson(prefix) {
+      return {
+        name: document.getElementById(`${prefix}_name`)?.value.trim() || "",
+        account: document.getElementById(`${prefix}_account`)?.value.trim() || "",
+        department: document.getElementById(`${prefix}_department`)?.value.trim() || "",
+        position: document.getElementById(`${prefix}_position`)?.value.trim() || "",
+      };
+    }
+
+    function syncNextWeekendOptions(selectedValue) {
+      const nextSelect = document.getElementById("nextWeekendIndex");
+      const currentValue = String(selectedValue ?? nextSelect.value ?? defaultState.nextWeekendIndex);
+      nextSelect.innerHTML = defaultState.employees.map((_, index) => {
+        const nameInput = document.getElementById(`name_${index}`);
+        const name = nameInput?.value.trim() || `员工${index + 1}`;
+        return `<option value="${index}" ${String(index) === currentValue ? "selected" : ""}>${name}</option>`;
+      }).join("");
+    }
+
+    function readState() {
+      syncNextWeekendOptions();
+      return {
+        startDate: document.getElementById("startDate").value,
+        weekCount: Number(document.getElementById("weekCount").value),
+        nextWeekendIndex: Number(document.getElementById("nextWeekendIndex").value),
+        productOps: readExportPerson("productOps"),
+        employees: defaultState.employees.map((_, index) => ({
+          name: document.getElementById(`name_${index}`).value.trim() || `员工${index + 1}`,
+          role: document.getElementById(`role_${index}`).value,
+        })),
+        exportEmployees: defaultState.exportEmployees.map((_, index) => readExportPerson(`export_${index}`)),
+      };
+    }
+
+    function validateState(state) {
+      if (!state.startDate) {
+        return "请先选开始日期。";
+      }
+      if (!Number.isInteger(state.weekCount) || state.weekCount < 1 || state.weekCount > 104) {
+        return "生成周数请填 1 到 104 之间的整数。";
+      }
+
+      const uniqueRoles = new Set(state.employees.map((item) => item.role));
+      if (uniqueRoles.size !== 4) {
+        return "4 个人的当前角色必须各不相同，不能重复。";
+      }
+
+      const currentWeekendIndex = state.employees.findIndex((item) => item.role === "W");
+      if (state.weekCount > 4 && state.nextWeekendIndex === currentWeekendIndex) {
+        return "超过 4 周时，“下一个休周末的人”不能和当前休周末的人相同。";
+      }
+
+      return "";
+    }
+
+    function isMonday(dateText) {
+      const date = new Date(`${dateText}T00:00:00`);
+      return date.getDay() === 1;
+    }
+
+    function buildWeeks(state) {
+      const stableRolesByEmployee = state.employees.map((item) => item.role);
+      const weeks = [];
+      let currentStable = [...stableRolesByEmployee];
+      let currentWeekendIndex = currentStable.findIndex((role) => role === "W");
+      let nextWeekendIndex = state.nextWeekendIndex;
+      let blockNo = 1;
+
+      while (weeks.length < state.weekCount) {
+        if (blockNo === 1) {
+          for (let i = 1; i <= 4 && weeks.length < state.weekCount; i += 1) {
+            weeks.push({
+              weekNo: weeks.length + 1,
+              blockNo,
+              weekInBlock: i,
+              weekType: "常规周",
+              rolesByEmployee: [...currentStable],
+            });
+          }
+        } else {
+          const nextWeekendPreviousRole = currentStable[nextWeekendIndex];
+          const swappedRoles = [...currentStable];
+          swappedRoles[nextWeekendIndex] = "W";
+          swappedRoles[currentWeekendIndex] = nextWeekendPreviousRole;
+          currentStable = swappedRoles;
+          currentWeekendIndex = nextWeekendIndex;
+          nextWeekendIndex = (nextWeekendIndex + 1) % state.employees.length;
+
+          weeks.push({
+            weekNo: weeks.length + 1,
+            blockNo,
+            weekInBlock: 1,
+            weekType: "换休周",
+            rolesByEmployee: [...currentStable],
+          });
+
+          for (let i = 2; i <= 4 && weeks.length < state.weekCount; i += 1) {
+            weeks.push({
+              weekNo: weeks.length + 1,
+              blockNo,
+              weekInBlock: i,
+              weekType: "常规周",
+              rolesByEmployee: [...currentStable],
+            });
+          }
+        }
+
+        blockNo += 1;
+      }
+
+      return weeks;
+    }
+
+    function addDays(dateText, days) {
+      const date = new Date(`${dateText}T00:00:00`);
+      date.setDate(date.getDate() + days);
+      return date;
+    }
+
+    function formatDate(date) {
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    }
+
+    function buildDayRows(state, weeks) {
+      const rows = [];
+      weeks.forEach((week) => {
+        week.rolesByEmployee.forEach((roleKey, employeeIndex) => {
+          week[`role_${employeeIndex}`] = roleKey;
+        });
+
+        for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
+          const date = addDays(state.startDate, rows.length);
+          rows.push({
+            date,
+            dateText: formatDate(date),
+            weekday: weekdays[dayIndex],
+            weekNo: week.weekNo,
+            blockNo: week.blockNo,
+            weekType: week.weekType,
+            shifts: week.rolesByEmployee.map((roleKey) => rolePatterns[roleKey][dayIndex]),
+          });
+        }
+      });
+      return rows;
+    }
+
+    function buildRoleRows(state, weeks) {
+      return weeks.map((week) => {
+        const byRole = {};
+        week.rolesByEmployee.forEach((roleKey, employeeIndex) => {
+          byRole[roleKey] = state.employees[employeeIndex].name;
+        });
+
+        return {
+          weekNo: week.weekNo,
+          blockNo: week.blockNo,
+          weekType: week.weekType,
+          weekendOff: byRole.W,
+          tueWedOff: byRole.T,
+          thuFriA: byRole.F1,
+          thuFriB: byRole.F2,
+        };
+      });
+    }
+
+    function buildStats(state, dayRows) {
+      return state.employees.map((employee, employeeIndex) => {
+        const stats = {
+          name: employee.name,
+          dayShift: 0,
+          nightShift: 0,
+          offShift: 0,
+          weekendOff: 0,
+          weekendDay: 0,
+          weekendNight: 0,
+        };
+
+        dayRows.forEach((row) => {
+          const shift = row.shifts[employeeIndex];
+          const isWeekend = row.weekday === "周六" || row.weekday === "周日";
+          if (shift === "白班") stats.dayShift += 1;
+          if (shift === "晚班") stats.nightShift += 1;
+          if (shift === "休假") stats.offShift += 1;
+          if (isWeekend && shift === "休假") stats.weekendOff += 1;
+          if (isWeekend && shift === "白班") stats.weekendDay += 1;
+          if (isWeekend && shift === "晚班") stats.weekendNight += 1;
+        });
+
+        return stats;
+      });
+    }
+
+    function renderKpis(weeks, dayRows) {
+      const transitionWeeks = weeks.filter((week) => week.weekType === "换休周").length;
+      const totalDays = dayRows.length;
+      kpiGrid.innerHTML = `
+        <div class="kpi">
+          <small>总周数</small>
+          <strong>${weeks.length}</strong>
+        </div>
+        <div class="kpi">
+          <small>总天数</small>
+          <strong>${totalDays}</strong>
+        </div>
+        <div class="kpi">
+          <small>换休周</small>
+          <strong>${transitionWeeks}</strong>
+        </div>
+        <div class="kpi">
+          <small>周末轮换次数</small>
+          <strong>${Math.max(transitionWeeks, 0)}</strong>
+        </div>
+      `;
+    }
+
+    function renderRotationTable(roleRows) {
+      rotationTable.tHead.innerHTML = `
+        <tr>
+          <th>周次</th>
+          <th>4周周期</th>
+          <th>周类型</th>
+          <th>周末休</th>
+          <th>周二三休</th>
+          <th>周四五休A</th>
+          <th>周四五休B</th>
+        </tr>
+      `;
+
+      rotationTable.tBodies[0].innerHTML = roleRows.map((row) => `
+        <tr>
+          <td>${row.weekNo}</td>
+          <td>${row.blockNo}</td>
+          <td class="${row.weekType === "换休周" ? "week-transition" : "week-regular"}">${row.weekType}</td>
+          <td>${row.weekendOff}</td>
+          <td>${row.tueWedOff}</td>
+          <td>${row.thuFriA}</td>
+          <td>${row.thuFriB}</td>
+        </tr>
+      `).join("");
+    }
+
+    function shiftClass(shift) {
+      if (shift === "白班") return "shift-day";
+      if (shift === "晚班") return "shift-night";
+      return "shift-off";
+    }
+
+    function productOpsShiftForDate(date) {
+      const index = date.getDay() === 0 ? 6 : date.getDay() - 1;
+      return productOpsPattern[index];
+    }
+
+    function displayShiftsForRow(row) {
+      return [productOpsShiftForDate(row.date), ...row.shifts];
+    }
+
+    function renderScheduleTable(state, dayRows) {
+      scheduleTable.tHead.innerHTML = `
+        <tr>
+          <th>日期</th>
+          <th>星期</th>
+          <th>周次</th>
+          <th>4周周期</th>
+          <th>周类型</th>
+          <th>${state.productOps.name || "产品运维专员"}</th>
+          ${state.employees.map((employee) => `<th>${employee.name}</th>`).join("")}
+        </tr>
+      `;
+
+      scheduleTable.tBodies[0].innerHTML = dayRows.map((row, rowIndex) => `
+        <tr>
+          <td>${row.dateText}</td>
+          <td>${row.weekday}</td>
+          <td>${row.weekNo}</td>
+          <td>${row.blockNo}</td>
+          <td class="${row.weekType === "换休周" ? "week-transition" : "week-regular"}">${row.weekType}</td>
+          ${displayShiftsForRow(row).map((shift, colIndex) => `<td class="${shiftClass(shift)} shift-cell" data-row-index="${rowIndex}" data-col-index="${colIndex}">${shift}</td>`).join("")}
+        </tr>
+      `).join("");
+      clearSelectedRange(false);
+    }
+
+    function renderSummary(stats) {
+      summaryGrid.innerHTML = stats.map((item) => `
+        <article class="person-card">
+          <h4>${item.name}</h4>
+          <div class="metric-row"><span>白班</span><strong>${item.dayShift}</strong></div>
+          <div class="metric-row"><span>晚班</span><strong>${item.nightShift}</strong></div>
+          <div class="metric-row"><span>休假</span><strong>${item.offShift}</strong></div>
+          <div class="metric-row"><span>周末休假</span><strong>${item.weekendOff}</strong></div>
+          <div class="metric-row"><span>周末白班</span><strong>${item.weekendDay}</strong></div>
+          <div class="metric-row"><span>周末晚班</span><strong>${item.weekendNight}</strong></div>
+        </article>
+      `).join("");
+    }
+
+    function setStatus(text, warning = false) {
+      statusBox.textContent = text;
+      statusBox.style.background = warning ? "#fff4db" : "#f1f7fa";
+      statusBox.style.borderColor = warning ? "#ebcf7e" : "#bfd2df";
+      statusBox.style.color = warning ? "#8a650d" : "var(--ink-soft)";
+    }
+
+    function buildTsv(state, dayRows) {
+      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name)];
+      const lines = [header.join("\t")];
+      dayRows.forEach((row) => {
+        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts].join("\t"));
+      });
+      return lines.join("\n");
+    }
+
+    function buildShiftOnlyTsv(dayRows) {
+      return dayRows.map((row) => row.shifts.join("\t")).join("\n");
+    }
+
+    function normalizeRange(anchor, current) {
+      return {
+        rowStart: Math.min(anchor.row, current.row),
+        rowEnd: Math.max(anchor.row, current.row),
+        colStart: Math.min(anchor.col, current.col),
+        colEnd: Math.max(anchor.col, current.col),
+      };
+    }
+
+    function readCellPosition(cell) {
+      return {
+        row: Number(cell.dataset.rowIndex),
+        col: Number(cell.dataset.colIndex),
+      };
+    }
+
+    function paintSelectedRange() {
+      document.querySelectorAll(".shift-cell.is-selected, .shift-cell.is-anchor").forEach((cell) => {
+        cell.classList.remove("is-selected", "is-anchor");
+      });
+
+      if (!selectedRange) return;
+
+      document.querySelectorAll(".shift-cell").forEach((cell) => {
+        const row = Number(cell.dataset.rowIndex);
+        const col = Number(cell.dataset.colIndex);
+        const inRows = row >= selectedRange.rowStart && row <= selectedRange.rowEnd;
+        const inCols = col >= selectedRange.colStart && col <= selectedRange.colEnd;
+        if (inRows && inCols) cell.classList.add("is-selected");
+      });
+
+      if (selectionAnchor) {
+        const anchorCell = document.querySelector(`.shift-cell[data-row-index="${selectionAnchor.row}"][data-col-index="${selectionAnchor.col}"]`);
+        anchorCell?.classList.add("is-anchor");
+      }
+    }
+
+    function clearSelectedRange(showMessage = true) {
+      selectionAnchor = null;
+      selectedRange = null;
+      isSelecting = false;
+      paintSelectedRange();
+      if (showMessage) setStatus("已清除选区。");
+    }
+
+    function selectedRangeToTsv() {
+      if (!selectedRange) return "";
+
+      const lines = [];
+      for (let rowIndex = selectedRange.rowStart; rowIndex <= selectedRange.rowEnd; rowIndex += 1) {
+        const row = latestDayRows[rowIndex];
+        const visibleShifts = displayShiftsForRow(row);
+        const cells = [];
+        for (let colIndex = selectedRange.colStart; colIndex <= selectedRange.colEnd; colIndex += 1) {
+          cells.push(visibleShifts[colIndex]);
+        }
+        lines.push(cells.join("\t"));
+      }
+      return lines.join("\n");
+    }
+
+    function downloadFile(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportCsv(state, dayRows) {
+      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name)];
+      const lines = [header.join(",")];
+      dayRows.forEach((row) => {
+        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts].join(","));
+      });
+      downloadFile("\uFEFF" + lines.join("\n"), "客服排班表.csv", "text/csv;charset=utf-8");
+    }
+
+    function exportXls(state, roleRows, dayRows, stats) {
+      const roleTableRows = roleRows.map((row) => `
+        <tr>
+          <td>${row.weekNo}</td>
+          <td>${row.blockNo}</td>
+          <td>${row.weekType}</td>
+          <td>${row.weekendOff}</td>
+          <td>${row.tueWedOff}</td>
+          <td>${row.thuFriA}</td>
+          <td>${row.thuFriB}</td>
+        </tr>
+      `).join("");
+
+      const dayTableRows = dayRows.map((row) => `
+        <tr>
+          <td>${row.dateText}</td>
+          <td>${row.weekday}</td>
+          <td>${row.weekNo}</td>
+          <td>${row.blockNo}</td>
+          <td>${row.weekType}</td>
+          ${row.shifts.map((shift) => `<td>${shift}</td>`).join("")}
+        </tr>
+      `).join("");
+
+      const statsRows = stats.map((item) => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.dayShift}</td>
+          <td>${item.nightShift}</td>
+          <td>${item.offShift}</td>
+          <td>${item.weekendOff}</td>
+          <td>${item.weekendDay}</td>
+          <td>${item.weekendNight}</td>
+        </tr>
+      `).join("");
+
+      const html = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: "Microsoft YaHei", sans-serif; }
+            table { border-collapse: collapse; margin-bottom: 16px; }
+            th, td { border: 1px solid #c7d3dd; padding: 6px 10px; text-align: center; }
+            th { background: #214b6e; color: #fff; }
+          </style>
+        </head>
+        <body>
+          <h2>客服排班器导出</h2>
+          <table>
+            <tr><th colspan="7">周轮换</th></tr>
+            <tr><th>周次</th><th>4周周期</th><th>周类型</th><th>周末休</th><th>周二三休</th><th>周四五休A</th><th>周四五休B</th></tr>
+            ${roleTableRows}
+          </table>
+          <table>
+            <tr><th colspan="${5 + state.employees.length}">详细排班表</th></tr>
+            <tr>
+              <th>日期</th><th>星期</th><th>周次</th><th>4周周期</th><th>周类型</th>
+              ${state.employees.map((item) => `<th>${item.name}</th>`).join("")}
+            </tr>
+            ${dayTableRows}
+          </table>
+          <table>
+            <tr><th colspan="7">个人统计</th></tr>
+            <tr><th>员工</th><th>白班</th><th>晚班</th><th>休假</th><th>周末休假</th><th>周末白班</th><th>周末晚班</th></tr>
+            ${statsRows}
+          </table>
+        </body>
+        </html>
+      `;
+      downloadFile("\uFEFF" + html, "客服排班表.xls", "application/vnd.ms-excel;charset=utf-8");
+    }
+
+    function downloadBytes(bytes, fileName, mimeType) {
+      const blob = new Blob([bytes], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function xmlEscape(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function colName(index) {
+      let name = "";
+      let n = index;
+      while (n > 0) {
+        const mod = (n - 1) % 26;
+        name = String.fromCharCode(65 + mod) + name;
+        n = Math.floor((n - mod) / 26);
+      }
+      return name;
+    }
+
+    function inlineCell(ref, value, style = 0) {
+      const styleAttr = style ? ` s="${style}"` : "";
+      if (value === "" || value === null || value === undefined) {
+        return `<c r="${ref}"${styleAttr}/>`;
+      }
+      return `<c r="${ref}"${styleAttr} t="inlineStr"><is><t>${xmlEscape(value)}</t></is></c>`;
+    }
+
+    function crc32(bytes) {
+      const table = crc32.table || (crc32.table = (() => {
+        const items = [];
+        for (let n = 0; n < 256; n += 1) {
+          let c = n;
+          for (let k = 0; k < 8; k += 1) {
+            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+          }
+          items[n] = c >>> 0;
+        }
+        return items;
+      })());
+
+      let crc = 0xffffffff;
+      for (const byte of bytes) {
+        crc = table[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+      }
+      return (crc ^ 0xffffffff) >>> 0;
+    }
+
+    function writeUint16(target, offset, value) {
+      target[offset] = value & 0xff;
+      target[offset + 1] = (value >>> 8) & 0xff;
+    }
+
+    function writeUint32(target, offset, value) {
+      target[offset] = value & 0xff;
+      target[offset + 1] = (value >>> 8) & 0xff;
+      target[offset + 2] = (value >>> 16) & 0xff;
+      target[offset + 3] = (value >>> 24) & 0xff;
+    }
+
+    function dosDateTime(date = new Date()) {
+      const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      const year = Math.max(date.getFullYear() - 1980, 0);
+      return { time, date: (year << 9) | (month << 5) | day };
+    }
+
+    function createZip(files) {
+      const encoder = new TextEncoder();
+      const now = dosDateTime();
+      const localParts = [];
+      const centralParts = [];
+      let offset = 0;
+
+      for (const file of files) {
+        const nameBytes = encoder.encode(file.name);
+        const data = typeof file.content === "string" ? encoder.encode(file.content) : file.content;
+        const crc = crc32(data);
+        const local = new Uint8Array(30 + nameBytes.length + data.length);
+        writeUint32(local, 0, 0x04034b50);
+        writeUint16(local, 4, 20);
+        writeUint16(local, 6, 0x0800);
+        writeUint16(local, 8, 0);
+        writeUint16(local, 10, now.time);
+        writeUint16(local, 12, now.date);
+        writeUint32(local, 14, crc);
+        writeUint32(local, 18, data.length);
+        writeUint32(local, 22, data.length);
+        writeUint16(local, 26, nameBytes.length);
+        writeUint16(local, 28, 0);
+        local.set(nameBytes, 30);
+        local.set(data, 30 + nameBytes.length);
+        localParts.push(local);
+
+        const central = new Uint8Array(46 + nameBytes.length);
+        writeUint32(central, 0, 0x02014b50);
+        writeUint16(central, 4, 20);
+        writeUint16(central, 6, 20);
+        writeUint16(central, 8, 0x0800);
+        writeUint16(central, 10, 0);
+        writeUint16(central, 12, now.time);
+        writeUint16(central, 14, now.date);
+        writeUint32(central, 16, crc);
+        writeUint32(central, 20, data.length);
+        writeUint32(central, 24, data.length);
+        writeUint16(central, 28, nameBytes.length);
+        writeUint16(central, 30, 0);
+        writeUint16(central, 32, 0);
+        writeUint16(central, 34, 0);
+        writeUint16(central, 36, 0);
+        writeUint32(central, 38, 0);
+        writeUint32(central, 42, offset);
+        central.set(nameBytes, 46);
+        centralParts.push(central);
+        offset += local.length;
+      }
+
+      const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+      const end = new Uint8Array(22);
+      writeUint32(end, 0, 0x06054b50);
+      writeUint16(end, 8, files.length);
+      writeUint16(end, 10, files.length);
+      writeUint32(end, 12, centralSize);
+      writeUint32(end, 16, offset);
+
+      const totalSize = offset + centralSize + end.length;
+      const zip = new Uint8Array(totalSize);
+      let cursor = 0;
+      [...localParts, ...centralParts, end].forEach((part) => {
+        zip.set(part, cursor);
+        cursor += part.length;
+      });
+      return zip;
+    }
+
+    function buildSheetXml(state, dayRows) {
+      const productOpsInfo = state.productOps || defaultState.productOps;
+      const wecomInfo = state.exportEmployees || defaultState.exportEmployees;
+      const exportRowCount = state.employees.length + 1;
+      const lastDataRow = 4 + exportRowCount;
+      const lastColIndex = 4 + dayRows.length;
+      const lastCol = colName(lastColIndex);
+      const firstDate = dayRows[0]?.date;
+      const lastDate = dayRows[dayRows.length - 1]?.date;
+      const title = firstDate && lastDate && firstDate.getMonth() === lastDate.getMonth() && firstDate.getFullYear() === lastDate.getFullYear()
+        ? `${firstDate.getFullYear()}${String(firstDate.getMonth() + 1).padStart(2, "0")}排班表`
+        : `${firstDate.getFullYear()}${String(firstDate.getMonth() + 1).padStart(2, "0")}${String(firstDate.getDate()).padStart(2, "0")}-${lastDate.getFullYear()}${String(lastDate.getMonth() + 1).padStart(2, "0")}${String(lastDate.getDate()).padStart(2, "0")}排班表`;
+      const note = "休息白班:09:30 -18:30 ; 晚班:14:00 -18:30 20:00 -23:00 ; （只能按现有班次排班，否则无法识别。班次信息只能在企业微信后台修改）";
+
+      const rows = [];
+      rows.push(`<row r="1">${Array.from({ length: lastColIndex }, (_, i) => inlineCell(`${colName(i + 1)}1`, i === 0 ? title : "", 2)).join("")}</row>`);
+      rows.push(`<row r="2">${Array.from({ length: lastColIndex }, (_, i) => inlineCell(`${colName(i + 1)}2`, i === 0 ? note : "", 2)).join("")}</row>`);
+      rows.push(`<row r="3">${["姓名", "账号", "部门", "职务"].map((value, i) => inlineCell(`${colName(i + 1)}3`, value, 3)).join("")}${dayRows.map((row, i) => inlineCell(`${colName(i + 5)}3`, row.weekday, 4)).join("")}</row>`);
+      rows.push(`<row r="4">${["", "", "", ""].map((value, i) => inlineCell(`${colName(i + 1)}4`, value, 3)).join("")}${dayRows.map((row, i) => inlineCell(`${colName(i + 5)}4`, row.date.getDate(), 5)).join("")}</row>`);
+
+      const productOpsFixedCells = [
+        productOpsInfo.name,
+        productOpsInfo.account,
+        productOpsInfo.department,
+        productOpsInfo.position,
+      ];
+      const productOpsShiftCells = dayRows.map((row, dayIndex) => {
+        const shift = productOpsShiftForDate(row.date);
+        return inlineCell(`${colName(dayIndex + 5)}5`, shift, 6);
+      }).join("");
+      rows.push(`<row r="5">${productOpsFixedCells.map((value, i) => inlineCell(`${colName(i + 1)}5`, value, 6)).join("")}${productOpsShiftCells}</row>`);
+
+      state.employees.forEach((employee, employeeIndex) => {
+        const info = wecomInfo[employeeIndex] || {};
+        const displayName = info.name || employee.name;
+        const outputRow = employeeIndex + 6;
+        const fixedCells = [
+          displayName || employee.name,
+          info.account || "",
+          info.department || "",
+          info.position || "",
+        ];
+        const shiftCells = dayRows.map((row, dayIndex) => {
+          const shift = row.shifts[employeeIndex] === "休假" ? "休息" : row.shifts[employeeIndex];
+          return inlineCell(`${colName(dayIndex + 5)}${outputRow}`, shift, 6);
+        }).join("");
+        rows.push(`<row r="${outputRow}">${fixedCells.map((value, i) => inlineCell(`${colName(i + 1)}${outputRow}`, value, 6)).join("")}${shiftCells}</row>`);
+      });
+
+      const mergeRefs = [`A1:${lastCol}1`, `A2:${lastCol}2`, "A3:A4", "B3:B4", "C3:C4", "D3:D4"];
+      return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <dimension ref="A1:${lastCol}${lastDataRow}"/>
+  <sheetViews><sheetView workbookViewId="0"/></sheetViews>
+  <sheetFormatPr defaultRowHeight="15"/>
+  <cols><col min="1" max="4" width="15" customWidth="1"/><col min="5" max="${lastColIndex}" width="8" customWidth="1"/></cols>
+  <sheetData>${rows.join("")}</sheetData>
+  <mergeCells count="${mergeRefs.length}">${mergeRefs.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>
+  <dataValidations count="2">
+    <dataValidation type="list" showErrorMessage="1" errorStyle="stop" errorTitle="格式错误" error="请勿修改标题" sqref="A1"><formula1>"${xmlEscape(title)}"</formula1></dataValidation>
+    <dataValidation type="list" allowBlank="1" showErrorMessage="1" errorStyle="stop" errorTitle="格式错误" error="请勿修改班次名称" sqref="E5:${lastCol}${lastDataRow}"><formula1>sheet2!$A$1:$C$1</formula1></dataValidation>
+  </dataValidations>
+  <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
+</worksheet>`;
+    }
+
+    function exportWecomTemplateXlsx(state, dayRows) {
+      if (!dayRows.length) return;
+      const sheetXml = buildSheetXml(state, dayRows);
+      const files = [
+        { name: "[Content_Types].xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>` },
+        { name: "_rels/.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>` },
+        { name: "docProps/app.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes"><Application>客服排班器</Application></Properties>` },
+        { name: "docProps/core.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>企业微信自定义排班模板</dc:title><dc:creator>客服排班器</dc:creator></cp:coreProperties>` },
+        { name: "xl/workbook.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="sheet1" sheetId="1" r:id="rId1"/><sheet name="sheet2" sheetId="2" state="hidden" r:id="rId2"/></sheets></workbook>` },
+        { name: "xl/_rels/workbook.xml.rels", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+        { name: "xl/styles.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Microsoft YaHei"/></font><font><b/><sz val="11"/><name val="Microsoft YaHei"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEAF2F8"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD9E2F3"/></left><right style="thin"><color rgb="FFD9E2F3"/></right><top style="thin"><color rgb="FFD9E2F3"/></top><bottom style="thin"><color rgb="FFD9E2F3"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` },
+        { name: "xl/worksheets/sheet1.xml", content: sheetXml },
+        { name: "xl/worksheets/sheet2.xml", content: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:C1"/><sheetData><row r="1">${inlineCell("A1", "休息")}${inlineCell("B1", "白班")}${inlineCell("C1", "晚班")}</row></sheetData></worksheet>` },
+      ];
+
+      const zip = createZip(files);
+      downloadBytes(zip, "企业微信自定义排班模板_已排班_含产品运维.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      setStatus("已生成企业微信横向模板，已包含产品运维固定班和客服排班。");
+    }
+
+    async function copyTable(state, dayRows) {
+      const tsv = buildTsv(state, dayRows);
+      await navigator.clipboard.writeText(tsv);
+      setStatus("详细排班已经复制到剪贴板，直接粘进 Excel 就可以。");
+    }
+
+    async function copyShiftOnly(dayRows) {
+      const tsv = buildShiftOnlyTsv(dayRows);
+      await navigator.clipboard.writeText(tsv);
+      setStatus("4个人的班次列已经复制好了，粘贴后就是4列：员工1到员工4。");
+    }
+
+    async function copySelectedShiftRange() {
+      const tsv = selectedRangeToTsv();
+      if (!tsv) {
+        setStatus("先在右侧班次区域拖出一个选区，再点“复制选中班次”。", true);
+        return;
+      }
+
+      await navigator.clipboard.writeText(tsv);
+      const rowCount = selectedRange.rowEnd - selectedRange.rowStart + 1;
+      const colCount = selectedRange.colEnd - selectedRange.colStart + 1;
+      setStatus(`已复制选中的 ${rowCount} 行 x ${colCount} 列班次，粘贴到 Excel 会保持这个形状。`);
+    }
+
+    function persistState(state) {
+      localStorage.setItem("serviceSchedulerState", JSON.stringify(state));
+    }
+
+    function hydrateState() {
+      const raw = localStorage.getItem("serviceSchedulerState");
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.startDate) document.getElementById("startDate").value = parsed.startDate;
+        if (parsed.weekCount) document.getElementById("weekCount").value = parsed.weekCount;
+        parsed.employees?.forEach((item, index) => {
+          const nameInput = document.getElementById(`name_${index}`);
+          const roleInput = document.getElementById(`role_${index}`);
+          if (nameInput && item.name) nameInput.value = item.name;
+          if (roleInput && item.role) roleInput.value = item.role;
+        });
+        if (parsed.productOps) writeExportPerson("productOps", parsed.productOps);
+        parsed.exportEmployees?.forEach((item, index) => writeExportPerson(`export_${index}`, item));
+        syncNextWeekendOptions(parsed.nextWeekendIndex ?? defaultState.nextWeekendIndex);
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+
+    function writeExportPerson(prefix, person) {
+      const fields = ["name", "account", "department", "position"];
+      fields.forEach((field) => {
+        const input = document.getElementById(`${prefix}_${field}`);
+        if (input && person[field] !== undefined) input.value = person[field];
+      });
+    }
+
+    let latestState = null;
+    let latestWeeks = [];
+    let latestRoleRows = [];
+    let latestDayRows = [];
+    let latestStats = [];
+    let selectionAnchor = null;
+    let selectedRange = null;
+    let isSelecting = false;
+
+    function generate() {
+      const state = readState();
+      const validationError = validateState(state);
+      if (validationError) {
+        setStatus(validationError, true);
+        return;
+      }
+
+      const weeks = buildWeeks(state);
+      const roleRows = buildRoleRows(state, weeks);
+      const dayRows = buildDayRows(state, weeks);
+      const stats = buildStats(state, dayRows);
+
+      latestState = state;
+      latestWeeks = weeks;
+      latestRoleRows = roleRows;
+      latestDayRows = dayRows;
+      latestStats = stats;
+
+      renderKpis(weeks, dayRows);
+      renderRotationTable(roleRows);
+      renderScheduleTable(state, dayRows);
+      renderSummary(stats);
+
+      const mondayWarning = isMonday(state.startDate)
+        ? `已生成 ${weeks.length} 周排班。开始日期是周一，规则完全对齐。`
+        : `已生成 ${weeks.length} 周排班，但你填的开始日期不是周一。表能出，但班型是按“周一开周”设计的，建议改成周一。`;
+      setStatus(mondayWarning, !isMonday(state.startDate));
+      tableMeta.textContent = `${state.startDate} 开始，共 ${weeks.length} 周，${dayRows.length} 天`;
+      persistState(state);
+    }
+
+    function resetAll() {
+      localStorage.removeItem("serviceSchedulerState");
+      document.getElementById("startDate").value = defaultState.startDate;
+      document.getElementById("weekCount").value = defaultState.weekCount;
+      defaultState.employees.forEach((employee, index) => {
+        document.getElementById(`name_${index}`).value = employee.name;
+        document.getElementById(`role_${index}`).value = employee.role;
+      });
+      writeExportPerson("productOps", defaultState.productOps);
+      defaultState.exportEmployees.forEach((person, index) => writeExportPerson(`export_${index}`, person));
+      syncNextWeekendOptions(defaultState.nextWeekendIndex);
+      generate();
+    }
+
+    buildRoster();
+    buildExportConfig();
+    syncNextWeekendOptions(defaultState.nextWeekendIndex);
+    hydrateState();
+    generate();
+
+    document.getElementById("generateBtn").addEventListener("click", generate);
+    document.getElementById("resetBtn").addEventListener("click", resetAll);
+    document.getElementById("csvBtn").addEventListener("click", () => latestState && exportCsv(latestState, latestDayRows));
+    document.getElementById("xlsBtn").addEventListener("click", () => latestState && exportXls(latestState, latestRoleRows, latestDayRows, latestStats));
+    document.getElementById("wecomBtn").addEventListener("click", () => latestState && exportWecomTemplateXlsx(latestState, latestDayRows));
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      if (!latestState) return;
+      try {
+        await copyTable(latestState, latestDayRows);
+      } catch (error) {
+        setStatus("浏览器没能写入剪贴板，你可以改用导出 CSV。", true);
+      }
+    });
+    document.getElementById("copyShiftsBtn").addEventListener("click", async () => {
+      if (!latestState) return;
+      try {
+        await copyShiftOnly(latestDayRows);
+      } catch (error) {
+        setStatus("浏览器没能写入剪贴板，你可以改用导出 CSV。", true);
+      }
+    });
+    document.getElementById("copySelectedBtn").addEventListener("click", async () => {
+      if (!latestState) return;
+      try {
+        await copySelectedShiftRange();
+      } catch (error) {
+        setStatus("浏览器没能写入剪贴板，你可以改用导出 CSV。", true);
+      }
+    });
+    document.getElementById("clearSelectionBtn").addEventListener("click", () => clearSelectedRange());
+
+    scheduleTable.addEventListener("mousedown", (event) => {
+      const cell = event.target.closest(".shift-cell");
+      if (!cell) return;
+      isSelecting = true;
+      selectionAnchor = readCellPosition(cell);
+      selectedRange = normalizeRange(selectionAnchor, selectionAnchor);
+      paintSelectedRange();
+      event.preventDefault();
+    });
+
+    scheduleTable.addEventListener("mouseover", (event) => {
+      if (!isSelecting || !selectionAnchor) return;
+      const cell = event.target.closest(".shift-cell");
+      if (!cell) return;
+      selectedRange = normalizeRange(selectionAnchor, readCellPosition(cell));
+      paintSelectedRange();
+    });
+
+    document.addEventListener("mouseup", () => {
+      isSelecting = false;
+    });
+  </script>
+</body>
+</html>
