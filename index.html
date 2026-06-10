@@ -761,23 +761,40 @@
     function buildRoster() {
       rosterEl.innerHTML = "";
       defaultState.employees.forEach((employee, index) => {
+        const person = defaultState.exportEmployees[index] || {};
         const row = document.createElement("div");
-        row.className = "roster-row";
+        row.className = "roster-row export-row";
         row.innerHTML = `
-          <div>
-            <strong>员工 ${index + 1}</strong>
+          <strong>客服 ${index + 1}</strong>
+          <div class="export-fields">
             <div class="field">
-              <label for="name_${index}">姓名</label>
-              <input id="name_${index}" type="text" value="${employee.name}" />
+              <label for="export_${index}_name">姓名</label>
+              <input id="export_${index}_name" type="text" value="${person.name || employee.name}" />
             </div>
-          </div>
-          <div class="field">
-            <label for="role_${index}">当前角色</label>
-            <select id="role_${index}">
-              ${roleOptions.map((role) => `
-                <option value="${role.value}" ${role.value === employee.role ? "selected" : ""}>${role.label}</option>
-              `).join("")}
-            </select>
+            <div class="field">
+              <label for="export_${index}_account">账号</label>
+              <input id="export_${index}_account" type="text" value="${person.account || ""}" />
+            </div>
+            <div class="field">
+              <label for="export_${index}_department">部门</label>
+              <input id="export_${index}_department" type="text" value="${person.department || ""}" />
+            </div>
+            <div class="field">
+              <label for="export_${index}_position">职务</label>
+              <select id="export_${index}_position">
+                <option value="">选填</option>
+                <option value="产品运维专员" ${person.position === "产品运维专员" ? "selected" : ""}>产品运维专员</option>
+                <option value="海外游戏客服" ${person.position === "海外游戏客服" ? "selected" : ""}>海外游戏客服</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="role_${index}">当前角色</label>
+              <select id="role_${index}">
+                ${roleOptions.map((role) => `
+                  <option value="${role.value}" ${role.value === employee.role ? "selected" : ""}>${role.label}</option>
+                `).join("")}
+              </select>
+            </div>
           </div>
         `;
         rosterEl.appendChild(row);
@@ -788,10 +805,9 @@
       exportConfigEl.innerHTML = `
         <div class="section-title">
           <h2>企微导出信息</h2>
-          <span class="hint">会写入导出模板</span>
+          <span class="hint">产品运维单独设置；客服信息在上方卡片里</span>
         </div>
         ${renderExportPerson("productOps", "产品运维专员", defaultState.productOps)}
-        ${defaultState.exportEmployees.map((person, index) => renderExportPerson(`export_${index}`, `客服 ${index + 1}`, person)).join("")}
       `;
     }
 
@@ -838,7 +854,7 @@
       const nextSelect = document.getElementById("nextWeekendIndex");
       const currentValue = String(selectedValue ?? nextSelect.value ?? defaultState.nextWeekendIndex);
       nextSelect.innerHTML = defaultState.employees.map((_, index) => {
-        const nameInput = document.getElementById(`name_${index}`);
+        const nameInput = document.getElementById(`export_${index}_name`);
         const name = nameInput?.value.trim() || `员工${index + 1}`;
         return `<option value="${index}" ${String(index) === currentValue ? "selected" : ""}>${name}</option>`;
       }).join("");
@@ -850,6 +866,7 @@
       const endDate = document.getElementById("endDate").value;
       const exportStartDate = document.getElementById("exportStartDate").value;
       const exportEndDate = document.getElementById("exportEndDate").value;
+      const exportEmployees = defaultState.employees.map((_, index) => readExportPerson(`export_${index}`));
       return {
         startDate,
         endDate,
@@ -858,11 +875,11 @@
         weekCount: startDate && endDate ? countCalendarWeeks(startDate, endDate) : 0,
         nextWeekendIndex: Number(document.getElementById("nextWeekendIndex").value),
         productOps: readExportPerson("productOps"),
-        employees: defaultState.employees.map((_, index) => ({
-          name: document.getElementById(`name_${index}`).value.trim() || `员工${index + 1}`,
+        employees: exportEmployees.map((person, index) => ({
+          name: person.name || `员工${index + 1}`,
           role: document.getElementById(`role_${index}`).value,
         })),
-        exportEmployees: defaultState.exportEmployees.map((_, index) => readExportPerson(`export_${index}`)),
+        exportEmployees,
       };
     }
 
@@ -1638,14 +1655,18 @@
         }
         document.getElementById("exportStartDate").value = parsed.exportStartDate || defaultState.exportStartDate;
         document.getElementById("exportEndDate").value = parsed.exportEndDate || document.getElementById("endDate").value || defaultState.exportEndDate;
-        parsed.employees?.forEach((item, index) => {
-          const nameInput = document.getElementById(`name_${index}`);
+        defaultState.employees.forEach((_, index) => {
           const roleInput = document.getElementById(`role_${index}`);
-          if (nameInput && item.name) nameInput.value = item.name;
-          if (roleInput && item.role) roleInput.value = item.role;
+          const savedRole = parsed.employees?.[index]?.role;
+          const savedPerson = parsed.exportEmployees?.[index] || {};
+          const legacyName = parsed.employees?.[index]?.name;
+          if (roleInput && savedRole) roleInput.value = savedRole;
+          writeExportPerson(`export_${index}`, {
+            ...savedPerson,
+            name: savedPerson.name || legacyName || "",
+          });
         });
         if (parsed.productOps) writeExportPerson("productOps", parsed.productOps);
-        parsed.exportEmployees?.forEach((item, index) => writeExportPerson(`export_${index}`, item));
         syncNextWeekendOptions(parsed.nextWeekendIndex ?? defaultState.nextWeekendIndex);
       } catch (error) {
         console.warn(error);
@@ -1705,11 +1726,10 @@
       document.getElementById("exportStartDate").value = defaultState.exportStartDate;
       document.getElementById("exportEndDate").value = defaultState.exportEndDate;
       defaultState.employees.forEach((employee, index) => {
-        document.getElementById(`name_${index}`).value = employee.name;
         document.getElementById(`role_${index}`).value = employee.role;
+        writeExportPerson(`export_${index}`, defaultState.exportEmployees[index] || { name: employee.name });
       });
       writeExportPerson("productOps", defaultState.productOps);
-      defaultState.exportEmployees.forEach((person, index) => writeExportPerson(`export_${index}`, person));
       syncNextWeekendOptions(defaultState.nextWeekendIndex);
       generate();
     }
