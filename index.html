@@ -371,6 +371,51 @@
       font-size: 13px;
     }
 
+    #scheduleTable {
+      min-width: 1180px;
+    }
+
+    #scheduleTable .schedule-sticky-date,
+    #scheduleTable .schedule-sticky-weekday {
+      position: sticky;
+      z-index: 3;
+      background: #fff;
+    }
+
+    #scheduleTable .schedule-sticky-date {
+      left: 0;
+      min-width: 102px;
+      width: 102px;
+    }
+
+    #scheduleTable .schedule-sticky-weekday {
+      left: 102px;
+      min-width: 68px;
+      width: 68px;
+      box-shadow: 8px 0 16px rgba(20, 50, 74, 0.10);
+    }
+
+    #scheduleTable thead .schedule-sticky-date,
+    #scheduleTable thead .schedule-sticky-weekday {
+      z-index: 5;
+      background: #214b6e;
+    }
+
+    #scheduleTable tbody tr:hover .schedule-sticky-date,
+    #scheduleTable tbody tr:hover .schedule-sticky-weekday {
+      background: #f6fbfd;
+    }
+
+    #scheduleTable .schedule-meta-col {
+      min-width: 82px;
+      width: 82px;
+    }
+
+    #scheduleTable .schedule-shift-col {
+      min-width: 148px;
+      width: 148px;
+    }
+
     tbody tr:first-child td {
       border-top: 1px solid #dde7ee;
     }
@@ -1161,24 +1206,24 @@
     function renderScheduleTable(state, dayRows) {
       scheduleTable.tHead.innerHTML = `
         <tr>
-          <th>日期</th>
-          <th>星期</th>
-          <th>周次</th>
-          <th>4周周期</th>
-          <th>周类型</th>
-          <th>${state.productOps.name || "产品运维专员"}</th>
-          ${state.employees.map((employee) => `<th>${employee.name}</th>`).join("")}
+          <th class="schedule-sticky-date">日期</th>
+          <th class="schedule-sticky-weekday">星期</th>
+          <th class="schedule-meta-col">周次</th>
+          <th class="schedule-meta-col">4周周期</th>
+          <th class="schedule-meta-col">周类型</th>
+          <th class="schedule-shift-col">${state.productOps.name || "产品运维专员"}</th>
+          ${state.employees.map((employee) => `<th class="schedule-shift-col">${employee.name}</th>`).join("")}
         </tr>
       `;
 
       scheduleTable.tBodies[0].innerHTML = dayRows.map((row, rowIndex) => `
         <tr>
-          <td>${row.dateText}</td>
-          <td>${row.weekday}</td>
-          <td>${row.weekNo}</td>
-          <td>${row.blockNo}</td>
-          <td class="${row.weekType === "换休周" ? "week-transition" : "week-regular"}">${row.weekType}</td>
-          ${displayShiftsForRow(row).map((shift, colIndex) => `<td class="${shiftClass(shift)} shift-cell" data-row-index="${rowIndex}" data-col-index="${colIndex}">${shift}</td>`).join("")}
+          <td class="schedule-sticky-date">${row.dateText}</td>
+          <td class="schedule-sticky-weekday">${row.weekday}</td>
+          <td class="schedule-meta-col">${row.weekNo}</td>
+          <td class="schedule-meta-col">${row.blockNo}</td>
+          <td class="schedule-meta-col ${row.weekType === "换休周" ? "week-transition" : "week-regular"}">${row.weekType}</td>
+          ${displayShiftsForRow(row).map((shift, colIndex) => `<td class="${shiftClass(shift)} schedule-shift-col shift-cell" data-row-index="${rowIndex}" data-col-index="${colIndex}">${shift}</td>`).join("")}
         </tr>
       `).join("");
       clearSelectedRange(false);
