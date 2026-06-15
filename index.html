@@ -787,10 +787,10 @@
         { name: "客服D", role: "F2" },
       ],
       exportEmployees: [
-        { name: "海外游戏客服-廖宇杰Kelly", account: "LiaoYuJie", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
-        { name: "海外游戏客服-唐禧雯lvy", account: "TangXiWen", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
         { name: "海外游戏客服-杨洋Mia", account: "YangYang", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
-        { name: "客服D", account: "", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "海外游戏客服-廖宇杰Kelly", account: "LiaoYuJie", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "海外游戏客服-彭泳琪Punny", account: "PengYongQi", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
+        { name: "海外游戏客服-唐禧雯", account: "TangXiWen", department: "OgCloud/产品运营中心/Ug运营部/海外客服组", position: "海外游戏客服" },
       ],
     };
 
@@ -1200,7 +1200,7 @@
     }
 
     function displayShiftsForRow(row) {
-      return [productOpsShiftForDate(row.date), ...row.shifts];
+      return [...row.shifts, productOpsShiftForDate(row.date)];
     }
 
     function renderScheduleTable(state, dayRows) {
@@ -1211,8 +1211,8 @@
           <th class="schedule-meta-col">周次</th>
           <th class="schedule-meta-col">4周周期</th>
           <th class="schedule-meta-col">周类型</th>
-          <th class="schedule-shift-col">${state.productOps.name || "产品运维专员"}</th>
           ${state.employees.map((employee) => `<th class="schedule-shift-col">${employee.name}</th>`).join("")}
+          <th class="schedule-shift-col">${state.productOps.name || "产品运维专员"}</th>
         </tr>
       `;
 
@@ -1251,10 +1251,10 @@
     }
 
     function buildTsv(state, dayRows) {
-      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name)];
+      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name), state.productOps.name || "产品运维专员"];
       const lines = [header.join("\t")];
       dayRows.forEach((row) => {
-        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts].join("\t"));
+        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts, productOpsShiftForDate(row.date)].join("\t"));
       });
       return lines.join("\n");
     }
@@ -1335,10 +1335,10 @@
     }
 
     function exportCsv(state, dayRows) {
-      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name)];
+      const header = ["日期", "星期", "周次", "4周周期", "周类型", ...state.employees.map((item) => item.name), state.productOps.name || "产品运维专员"];
       const lines = [header.join(",")];
       dayRows.forEach((row) => {
-        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts].join(","));
+        lines.push([row.dateText, row.weekday, row.weekNo, row.blockNo, row.weekType, ...row.shifts, productOpsShiftForDate(row.date)].join(","));
       });
       downloadFile("\uFEFF" + lines.join("\n"), "客服排班表.csv", "text/csv;charset=utf-8");
     }
@@ -1363,7 +1363,7 @@
           <td>${row.weekNo}</td>
           <td>${row.blockNo}</td>
           <td>${row.weekType}</td>
-          ${row.shifts.map((shift) => `<td>${shift}</td>`).join("")}
+          ${[...row.shifts, productOpsShiftForDate(row.date)].map((shift) => `<td>${shift}</td>`).join("")}
         </tr>
       `).join("");
 
@@ -1398,10 +1398,11 @@
             ${roleTableRows}
           </table>
           <table>
-            <tr><th colspan="${5 + state.employees.length}">详细排班表</th></tr>
+            <tr><th colspan="${6 + state.employees.length}">详细排班表</th></tr>
             <tr>
               <th>日期</th><th>星期</th><th>周次</th><th>4周周期</th><th>周类型</th>
               ${state.employees.map((item) => `<th>${item.name}</th>`).join("")}
+              <th>${state.productOps.name || "产品运维专员"}</th>
             </tr>
             ${dayTableRows}
           </table>
@@ -1581,22 +1582,10 @@
       rows.push(`<row r="3">${["姓名", "账号", "部门", "职务"].map((value, i) => inlineCell(`${colName(i + 1)}3`, value, 3)).join("")}${dayRows.map((row, i) => inlineCell(`${colName(i + 5)}3`, row.weekday, 4)).join("")}</row>`);
       rows.push(`<row r="4">${["", "", "", ""].map((value, i) => inlineCell(`${colName(i + 1)}4`, value, 3)).join("")}${dayRows.map((row, i) => inlineCell(`${colName(i + 5)}4`, row.date.getDate(), 5)).join("")}</row>`);
 
-      const productOpsFixedCells = [
-        productOpsInfo.name,
-        productOpsInfo.account,
-        productOpsInfo.department,
-        productOpsInfo.position,
-      ];
-      const productOpsShiftCells = dayRows.map((row, dayIndex) => {
-        const shift = productOpsShiftForDate(row.date);
-        return inlineCell(`${colName(dayIndex + 5)}5`, shift, 6);
-      }).join("");
-      rows.push(`<row r="5">${productOpsFixedCells.map((value, i) => inlineCell(`${colName(i + 1)}5`, value, 6)).join("")}${productOpsShiftCells}</row>`);
-
       state.employees.forEach((employee, employeeIndex) => {
         const info = wecomInfo[employeeIndex] || {};
         const displayName = info.name || employee.name;
-        const outputRow = employeeIndex + 6;
+        const outputRow = employeeIndex + 5;
         const fixedCells = [
           displayName || employee.name,
           info.account || "",
@@ -1609,6 +1598,19 @@
         }).join("");
         rows.push(`<row r="${outputRow}">${fixedCells.map((value, i) => inlineCell(`${colName(i + 1)}${outputRow}`, value, 6)).join("")}${shiftCells}</row>`);
       });
+
+      const productOpsOutputRow = state.employees.length + 5;
+      const productOpsFixedCells = [
+        productOpsInfo.name,
+        productOpsInfo.account,
+        productOpsInfo.department,
+        productOpsInfo.position,
+      ];
+      const productOpsShiftCells = dayRows.map((row, dayIndex) => {
+        const shift = productOpsShiftForDate(row.date);
+        return inlineCell(`${colName(dayIndex + 5)}${productOpsOutputRow}`, shift, 6);
+      }).join("");
+      rows.push(`<row r="${productOpsOutputRow}">${productOpsFixedCells.map((value, i) => inlineCell(`${colName(i + 1)}${productOpsOutputRow}`, value, 6)).join("")}${productOpsShiftCells}</row>`);
 
       const mergeRefs = [`A1:${lastCol}1`, `A2:${lastCol}2`, "A3:A4", "B3:B4", "C3:C4", "D3:D4"];
       return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -1703,13 +1705,8 @@
         defaultState.employees.forEach((_, index) => {
           const roleInput = document.getElementById(`role_${index}`);
           const savedRole = parsed.employees?.[index]?.role;
-          const savedPerson = parsed.exportEmployees?.[index] || {};
-          const legacyName = parsed.employees?.[index]?.name;
           if (roleInput && savedRole) roleInput.value = savedRole;
-          writeExportPerson(`export_${index}`, {
-            ...savedPerson,
-            name: savedPerson.name || legacyName || "",
-          });
+          writeExportPerson(`export_${index}`, defaultState.exportEmployees[index] || {});
         });
         if (parsed.productOps) writeExportPerson("productOps", parsed.productOps);
         syncNextWeekendOptions(parsed.nextWeekendIndex ?? defaultState.nextWeekendIndex);
