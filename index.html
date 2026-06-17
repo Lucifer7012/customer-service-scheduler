@@ -1621,8 +1621,7 @@
   <cols><col min="1" max="4" width="15" customWidth="1"/><col min="5" max="${lastColIndex}" width="8" customWidth="1"/></cols>
   <sheetData>${rows.join("")}</sheetData>
   <mergeCells count="${mergeRefs.length}">${mergeRefs.map((ref) => `<mergeCell ref="${ref}"/>`).join("")}</mergeCells>
-  <dataValidations count="2">
-    <dataValidation type="list" showErrorMessage="1" errorStyle="stop" errorTitle="格式错误" error="请勿修改标题" sqref="A1"><formula1>"${xmlEscape(title)}"</formula1></dataValidation>
+  <dataValidations count="1">
     <dataValidation type="list" allowBlank="1" showErrorMessage="1" errorStyle="stop" errorTitle="格式错误" error="请勿修改班次名称" sqref="E5:${lastCol}${lastDataRow}"><formula1>sheet2!$A$1:$C$1</formula1></dataValidation>
   </dataValidations>
   <pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>
