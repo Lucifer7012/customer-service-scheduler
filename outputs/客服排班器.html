@@ -721,7 +721,7 @@
           <div class="rules-grid">
             <div class="rule-box">
               <strong>固定班型</strong>
-              周末休：周六周日休。周二三休：周二周三休。周四五休 A / B：两个人都休周四周五，但班次分布不同。
+              周末休：周六周日休。周二三休：周二周三休。周四五休 A：周一晚、周二白、周三白、周四休、周五休、周六晚、周日晚。周四五休 B：周一晚、周二晚、周三晚、周四休、周五休、周六白、周日白。
             </div>
             <div class="rule-box">
               <strong>轮换逻辑</strong>
@@ -748,8 +748,8 @@
     const roleOptions = [
       { value: "W", label: "周末休" },
       { value: "T", label: "周二三休" },
-      { value: "F1", label: "周四五休A" },
-      { value: "F2", label: "周四五休B" },
+      { value: "F1", label: "周四五休A（晚白白休休晚晚）" },
+      { value: "F2", label: "周四五休B（晚晚晚休休白白）" },
     ];
 
     const roleLabels = {
@@ -768,6 +768,19 @@
 
     const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
     const productOpsPattern = ["白班", "晚班", "白班", "晚班", "休息", "休息", "晚班"];
+
+    function formatRolePattern(roleKey) {
+      const pattern = rolePatterns[roleKey] || [];
+      return `周一到周日：${weekdays.map((day, index) => `${day}${pattern[index] || ""}`).join(" / ")}`;
+    }
+
+    function refreshRoleNotes() {
+      defaultState.employees.forEach((_, index) => {
+        const roleInput = document.getElementById(`role_${index}`);
+        const note = document.getElementById(`role_note_${index}`);
+        if (roleInput && note) note.textContent = formatRolePattern(roleInput.value);
+      });
+    }
     const defaultState = {
       startDate: "2026-05-11",
       endDate: "2026-06-30",
@@ -839,10 +852,14 @@
                   <option value="${role.value}" ${role.value === employee.role ? "selected" : ""}>${role.label}</option>
                 `).join("")}
               </select>
+              <div class="role-note" id="role_note_${index}">${formatRolePattern(employee.role)}</div>
             </div>
           </div>
         `;
         rosterEl.appendChild(row);
+      });
+      defaultState.employees.forEach((_, index) => {
+        document.getElementById(`role_${index}`).addEventListener("change", refreshRoleNotes);
       });
     }
 
@@ -1709,6 +1726,7 @@
         });
         if (parsed.productOps) writeExportPerson("productOps", parsed.productOps);
         syncNextWeekendOptions(parsed.nextWeekendIndex ?? defaultState.nextWeekendIndex);
+        refreshRoleNotes();
       } catch (error) {
         console.warn(error);
       }
@@ -1772,6 +1790,7 @@
       });
       writeExportPerson("productOps", defaultState.productOps);
       syncNextWeekendOptions(defaultState.nextWeekendIndex);
+      refreshRoleNotes();
       generate();
     }
 
