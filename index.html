@@ -860,6 +860,7 @@
       });
       defaultState.employees.forEach((_, index) => {
         document.getElementById(`role_${index}`).addEventListener("change", refreshRoleNotes);
+        document.getElementById(`export_${index}_name`).addEventListener("input", () => syncNextWeekendOptions());
       });
     }
 
@@ -915,11 +916,16 @@
     function syncNextWeekendOptions(selectedValue) {
       const nextSelect = document.getElementById("nextWeekendIndex");
       const currentValue = String(selectedValue ?? nextSelect.value ?? defaultState.nextWeekendIndex);
-      nextSelect.innerHTML = defaultState.employees.map((_, index) => {
+      nextSelect.innerHTML = "";
+      defaultState.employees.forEach((_, index) => {
         const nameInput = document.getElementById(`export_${index}_name`);
         const name = nameInput?.value.trim() || `员工${index + 1}`;
-        return `<option value="${index}" ${String(index) === currentValue ? "selected" : ""}>${name}</option>`;
-      }).join("");
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = name;
+        option.selected = String(index) === currentValue;
+        nextSelect.appendChild(option);
+      });
     }
 
     function readState() {
@@ -1722,7 +1728,7 @@
           const roleInput = document.getElementById(`role_${index}`);
           const savedRole = parsed.employees?.[index]?.role;
           if (roleInput && savedRole) roleInput.value = savedRole;
-          writeExportPerson(`export_${index}`, defaultState.exportEmployees[index] || {});
+          writeExportPerson(`export_${index}`, parsed.exportEmployees?.[index] || defaultState.exportEmployees[index] || {});
         });
         if (parsed.productOps) writeExportPerson("productOps", parsed.productOps);
         syncNextWeekendOptions(parsed.nextWeekendIndex ?? defaultState.nextWeekendIndex);
